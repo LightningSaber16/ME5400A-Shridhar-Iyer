@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Braitenberg Surveillance Sim — Codebase Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & base ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0c0f14;
+    --bg2:       #121720;
+    --bg3:       #1a2030;
+    --border:    #232c3d;
+    --border2:   #2e3d55;
+    --green:     #3ddc84;
+    --green2:    #2ab56a;
+    --amber:     #e8a93a;
+    --blue:      #5b9cf6;
+    --coral:     #e0624a;
+    --muted:     #4a5a72;
+    --text:      #c8d4e8;
+    --text2:     #8899b4;
+    --text3:     #5a6b82;
+    --heading:   #e8edf5;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'Syne', sans-serif;
+    --serif:     'Lora', serif;
+    --radius:    6px;
+    --radius2:   12px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  .shell {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sidebar-brand {
+    padding: 0 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+
+  .sidebar-brand .label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .sidebar-brand h2 {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.3;
+  }
+
+  .nav-section {
+    padding: 0 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .nav-section-title {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.5rem 0.3rem;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.38rem 0.6rem;
+    border-radius: var(--radius);
+    color: var(--text2);
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-link:hover { background: var(--bg3); color: var(--text); }
+
+  .nav-link .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--border2);
+  }
+
+  .nav-link.green .dot { background: var(--green); }
+  .nav-link.amber .dot { background: var(--amber); }
+  .nav-link.blue  .dot { background: var(--blue);  }
+  .nav-link.coral .dot { background: var(--coral); }
+
+  /* ── Main content ─────────────────────────────────────────────────────── */
+  .content {
+    padding: 4rem 5rem 8rem 5rem;
+    max-width: 860px;
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
+  .hero {
+    margin-bottom: 5rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-family: var(--sans);
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.1;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero .subtitle {
+    font-size: 1.05rem;
+    color: var(--text2);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  /* file grid */
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-top: 2.5rem;
+  }
+
+  .file-pill {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .file-pill .fname {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--heading);
+  }
+
+  .file-pill .fdesc {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--text3);
+  }
+
+  .file-pill.g { border-left: 3px solid var(--green); }
+  .file-pill.a { border-left: 3px solid var(--amber); }
+  .file-pill.b { border-left: 3px solid var(--blue);  }
+  .file-pill.c { border-left: 3px solid var(--coral); }
+
+  /* ── Sections ─────────────────────────────────────────────────────────── */
+  .section {
+    margin-bottom: 4.5rem;
+    scroll-margin-top: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--green);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .section h2 {
+    font-family: var(--sans);
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--heading);
+    letter-spacing: -0.01em;
+  }
+
+  .section h3 {
+    font-family: var(--sans);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin: 2rem 0 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .section h3::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    background: var(--amber);
+    flex-shrink: 0;
+  }
+
+  .section p {
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+
+  /* ── File badge ───────────────────────────────────────────────────────── */
+  .file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 0.18rem 0.55rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--blue);
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+  }
+
+  /* ── Code blocks ──────────────────────────────────────────────────────── */
+  .code-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    overflow: hidden;
+    margin: 1.25rem 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 1rem;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-header .code-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .code-header .code-file {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--blue);
+  }
+
+  pre {
+    padding: 1.25rem 1.4rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  .kw   { color: var(--blue);  }
+  .fn   { color: var(--green); }
+  .str  { color: var(--amber); }
+  .cm   { color: var(--text3); font-style: italic; }
+  .num  { color: var(--coral); }
+
+  /* ── Parameter tables ─────────────────────────────────────────────────── */
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.85rem;
+  }
+
+  .param-table th {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border2);
+  }
+
+  .param-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+
+  .param-table td:first-child {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--green);
+    white-space: nowrap;
+  }
+
+  .param-table td:nth-child(2) {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--amber);
+  }
+
+  .param-table td:nth-child(3) {
+    font-family: var(--serif);
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+
+  .param-table tr:hover td { background: var(--bg3); }
+
+  /* ── Flow diagrams ────────────────────────────────────────────────────── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
+  }
+
+  .flow-step {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.9rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .flow-step.g { border-color: var(--green); color: var(--green); }
+  .flow-step.a { border-color: var(--amber); color: var(--amber); }
+  .flow-step.b { border-color: var(--blue);  color: var(--blue);  }
+  .flow-step.c { border-color: var(--coral); color: var(--coral); }
+
+  .flow-arrow {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 0 0.5rem;
+  }
+
+  /* ── Callout boxes ────────────────────────────────────────────────────── */
+  .callout {
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  .callout.green {
+    background: rgba(61,220,132,0.06);
+    border-left: 3px solid var(--green2);
+    color: #9ee8c0;
+  }
+
+  .callout.amber {
+    background: rgba(232,169,58,0.06);
+    border-left: 3px solid var(--amber);
+    color: #e8c87a;
+  }
+
+  .callout.blue {
+    background: rgba(91,156,246,0.06);
+    border-left: 3px solid var(--blue);
+    color: #9bc0f8;
+  }
+
+  .callout strong {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: block;
+    margin-bottom: 0.3rem;
+    opacity: 0.75;
+  }
+
+  /* ── Inline code ──────────────────────────────────────────────────────── */
+  code {
+    font-family: var(--mono);
+    font-size: 0.82em;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.1em 0.38em;
+    color: var(--blue);
+  }
+
+  /* ── Formula strip ────────────────────────────────────────────────────── */
+  .formula {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.3rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--amber);
+    margin: 1.1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .formula .lhs { color: var(--text2); }
+  .formula .rhs { color: var(--amber); }
+
+  /* ── Metrics grid ─────────────────────────────────────────────────────── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+  }
+
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 1rem 1.1rem;
+  }
+
+  .metric-card .m-name {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 0.3rem;
+  }
+
+  .metric-card .m-title {
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin-bottom: 0.35rem;
+  }
+
+  .metric-card .m-desc {
+    font-family: var(--serif);
+    font-size: 0.82rem;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+
+  /* ── Output structure ─────────────────────────────────────────────────── */
+  .output-tree {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 1.25rem 1.4rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 2;
+    margin: 1.25rem 0;
+  }
+
+  .output-tree .dir  { color: var(--blue); }
+  .output-tree .file { color: var(--text2); }
+  .output-tree .note { color: var(--text3); font-style: italic; }
+
+  /* ── Scrollbar ────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── Animations ───────────────────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero { animation: fadeUp 0.5s ease both; }
+  .section { animation: fadeUp 0.5s ease both; }
+  .section:nth-child(2)  { animation-delay: 0.05s; }
+  .section:nth-child(3)  { animation-delay: 0.10s; }
+  .section:nth-child(4)  { animation-delay: 0.15s; }
+  .section:nth-child(5)  { animation-delay: 0.18s; }
+  .section:nth-child(6)  { animation-delay: 0.21s; }
+  .section:nth-child(7)  { animation-delay: 0.24s; }
+  .section:nth-child(8)  { animation-delay: 0.27s; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="label">ME5400 · Project Docs</div>
+      <h2>Braitenberg<br>Surveillance Sim</h2>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Overview</div>
+      <a href="#overview"   class="nav-link green"><span class="dot"></span>Architecture</a>
+      <a href="#config"     class="nav-link green"><span class="dot"></span>config.py</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Core Simulation</div>
+      <a href="#geometry"   class="nav-link amber"><span class="dot"></span>geometry.py</a>
+      <a href="#robot"      class="nav-link amber"><span class="dot"></span>robot.py</a>
+      <a href="#intruder"   class="nav-link amber"><span class="dot"></span>intruder.py</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Visualisation</div>
+      <a href="#renderer"   class="nav-link blue"><span class="dot"></span>renderer.py</a>
+      <a href="#main"       class="nav-link blue"><span class="dot"></span>main.py</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Experiments</div>
+      <a href="#logger"     class="nav-link coral"><span class="dot"></span>logger.py</a>
+      <a href="#runner"     class="nav-link coral"><span class="dot"></span>run_experiments.py</a>
+      <a href="#analyse"    class="nav-link coral"><span class="dot"></span>analyse.py</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Reference</div>
+      <a href="#dataflow"   class="nav-link"><span class="dot"></span>Data flow</a>
+      <a href="#running"    class="nav-link"><span class="dot"></span>Running the code</a>
+    </div>
+  </nav>
+
+  <!-- ── Main ────────────────────────────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="eyebrow">Technical Documentation</div>
+      <h1>Braitenberg-Based<br>Surveillance Simulation</h1>
+      <p class="subtitle">
+        A Python/Pygame simulation of a reactive pursuit robot using
+        Braitenberg vehicle principles. This document covers every module
+        in the codebase — what it does, how it works, and how the pieces
+        connect.
+      </p>
+
+      <div class="file-grid">
+        <div class="file-pill g"><span class="fname">config.py</span><span class="fdesc">all parameters</span></div>
+        <div class="file-pill a"><span class="fname">geometry.py</span><span class="fdesc">math utilities</span></div>
+        <div class="file-pill a"><span class="fname">robot.py</span><span class="fdesc">Braitenberg controller</span></div>
+        <div class="file-pill a"><span class="fname">intruder.py</span><span class="fdesc">target agent</span></div>
+        <div class="file-pill b"><span class="fname">renderer.py</span><span class="fdesc">Pygame drawing</span></div>
+        <div class="file-pill b"><span class="fname">main.py</span><span class="fdesc">live sim loop</span></div>
+        <div class="file-pill c"><span class="fname">logger.py</span><span class="fdesc">CSV logging</span></div>
+        <div class="file-pill c"><span class="fname">run_experiments.py</span><span class="fdesc">batch runner</span></div>
+        <div class="file-pill c"><span class="fname">analyse.py</span><span class="fdesc">plots & stats</span></div>
+      </div>
+    </div>
+
+    <!-- ── Section 1: Overview ────────────────────────────────────────────── -->
+    <section class="section" id="overview">
+      <div class="section-header">
+        <span class="section-tag">§ 1</span>
+        <h2>System Architecture</h2>
+      </div>
+
+      <p>
+        The codebase is split into three clean layers. The <em>simulation layer</em>
+        handles all physics and agent logic with no display dependency.
+        The <em>visualisation layer</em> reads state from the simulation and
+        renders it to a Pygame window. The <em>experiment layer</em> drives the
+        simulation headlessly in batch, logs results to CSV, and produces plots.
+      </p>
+
+      <div class="flow">
+        <div class="flow-step g">config.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step a">geometry.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step a">robot.py</div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-step a">intruder.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step b">renderer.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step b">main.py</div>
+      </div>
+      <div class="flow">
+        <div class="flow-step a">robot.py</div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-step a">intruder.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step c">logger.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step c">run_experiments.py</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step c">analyse.py</div>
+      </div>
+
+      <div class="callout green">
+        <strong>Key design principle</strong>
+        The simulation logic (robot.py, intruder.py, geometry.py) contains
+        zero Pygame imports. This means the same robot and intruder code runs
+        identically in the live Pygame window and in headless batch experiments —
+        no code duplication, no conditional imports.
+      </div>
+    </section>
+
+    <!-- ── Section 2: config.py ───────────────────────────────────────────── -->
+    <section class="section" id="config">
+      <div class="section-header">
+        <span class="section-tag">§ 2</span>
+        <h2>config.py — Global Parameters</h2>
+      </div>
+      <div class="file-badge">config.py</div>
+
+      <p>
+        All numeric constants used across the codebase live in a single flat
+        file. Every other module imports this as <code>import config as C</code>
+        and references values as <code>C.ARENA_W</code>, <code>C.PURSUIT_WEIGHT</code>,
+        etc. This means any parameter change takes effect everywhere
+        simultaneously — there are no magic numbers buried in other files.
+      </p>
+
+      <table class="param-table">
+        <thead>
+          <tr><th>Constant</th><th>Value</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ARENA_W / ARENA_H</td><td>800</td><td>Arena size in pixels. Square arena, fully reflective walls.</td></tr>
+          <tr><td>ROBOT_RADIUS</td><td>12 px</td><td>Physical body radius, used for collision resolution and sensor placement.</td></tr>
+          <tr><td>ROBOT_MAX_SPEED</td><td>3.0 px/step</td><td>Per-motor speed ceiling. Robot is 1.67× faster than intruder.</td></tr>
+          <tr><td>ROBOT_START</td><td>(100, 400)</td><td>Initial position — left-centre of arena, facing right.</td></tr>
+          <tr><td>N_PROX_SENSORS</td><td>8</td><td>Proximity sensors evenly spaced around the body at 45° intervals.</td></tr>
+          <tr><td>PROX_RANGE</td><td>80 px</td><td>Max obstacle detection distance. 10% of arena width.</td></tr>
+          <tr><td>PROX_GAIN</td><td>1.5</td><td>Fixed multiplier on the avoidance channel output.</td></tr>
+          <tr><td>TARGET_SENSOR_FOV</td><td>1.8 rad</td><td>Half-angle of each target sensor. ~206° total coverage.</td></tr>
+          <tr><td>TARGET_SENSOR_RANGE</td><td>900 px</td><td>Intruder detectable anywhere in the arena at all times.</td></tr>
+          <tr><td>TARGET_GAIN</td><td>2.5</td><td>Fixed multiplier on the pursuit channel output.</td></tr>
+          <tr><td>PURSUIT_WEIGHT (α)</td><td>1.0</td><td>Scales the pursuit channel. Key parameter for hybrid RL experiment.</td></tr>
+          <tr><td>AVOIDANCE_WEIGHT (β)</td><td>1.2</td><td>Scales the avoidance channel. β > α prioritises collision avoidance.</td></tr>
+          <tr><td>CAPTURE_RADIUS</td><td>20 px</td><td>Robot centre must be within this distance of intruder to count as capture.</td></tr>
+          <tr><td>INTRUDER_SPEED</td><td>1.8 px/step</td><td>Constant intruder speed. Robot always faster in open space.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout amber">
+        <strong>Colours</strong>
+        The bottom of config.py defines all RGB/RGBA colour constants used by
+        renderer.py — COL_ROBOT, COL_INTRUDER, COL_OBSTACLE, etc. Changing
+        colours for a run only requires editing this one file.
+      </div>
+    </section>
+
+    <!-- ── Section 3: geometry.py ─────────────────────────────────────────── -->
+    <section class="section" id="geometry">
+      <div class="section-header">
+        <span class="section-tag">§ 3</span>
+        <h2>geometry.py — Math Utilities</h2>
+      </div>
+      <div class="file-badge">geometry.py</div>
+
+      <p>
+        A pure-math module with no simulation state and no dependencies beyond
+        the standard library. All four functions are used by both robot.py and
+        intruder.py. Keeping geometry isolated here means the math can be tested
+        and reasoned about entirely on its own.
+      </p>
+
+      <h3>angle_wrap(a)</h3>
+      <p>
+        Wraps any angle to the range [−π, π] using <code>atan2(sin(a), cos(a))</code>.
+        Used every time a bearing or heading change is computed to prevent
+        accumulated drift and ensure correct left/right comparisons.
+      </p>
+
+      <h3>distance(ax, ay, bx, by)</h3>
+      <p>
+        Euclidean distance between two points via <code>math.hypot</code>.
+        Called in collision detection, capture checking, and sensor intensity
+        calculations.
+      </p>
+
+      <h3>angle_to(fx, fy, tx, ty)</h3>
+      <p>
+        Returns the bearing in radians from point F to point T using
+        <code>atan2(ty−fy, tx−fx)</code>. Used by the robot's target sensor
+        to compute the intruder's bearing relative to the robot's heading.
+      </p>
+
+      <h3>ray_circle_intersection(ox, oy, dx, dy, cx, cy, r, max_dist)</h3>
+      <p>
+        Solves the analytic ray–circle intersection. The ray originates at
+        (ox, oy) and travels in direction (dx, dy). Returns the distance
+        to the nearest intersection with circle (cx, cy, r), or
+        <code>max_dist</code> if no hit within range.
+      </p>
+      <p>
+        This is the core of the proximity sensor model. The quadratic
+        discriminant is computed as:
+      </p>
+      <div class="formula">
+        <span class="lhs">disc =</span>
+        <span class="rhs">b² − 4ac</span>
+        <span class="lhs">&nbsp; where &nbsp; a = d·d, &nbsp; b = 2(f·d), &nbsp; c = f·f − r²</span>
+      </div>
+      <p>
+        If disc &lt; 0, no intersection. Otherwise the two roots t₁, t₂ are
+        computed; the smallest positive t less than max_dist is returned.
+      </p>
+
+      <h3>ray_wall_intersection(ox, oy, dx, dy, arena_w, arena_h, max_dist)</h3>
+      <p>
+        Tests the ray against all four arena walls (x=0, x=W, y=0, y=H) using
+        parametric line–plane intersection. Returns the closest wall hit within
+        max_dist. This runs before the circle test in each sensor ray cast, so
+        wall readings always take priority over obstacle readings at equal
+        distance.
+      </p>
+    </section>
+
+    <!-- ── Section 4: robot.py ────────────────────────────────────────────── -->
+    <section class="section" id="robot">
+      <div class="section-header">
+        <span class="section-tag">§ 4</span>
+        <h2>robot.py — Braitenberg Vehicle</h2>
+      </div>
+      <div class="file-badge">robot.py</div>
+
+      <p>
+        The core of the project. <code>BraitenbergRobot</code> is a
+        differential-drive agent whose motor commands are produced by
+        superimposing two Braitenberg channels — no planning, no map, no memory
+        beyond the current sensor readings.
+      </p>
+
+      <h3>Proximity sensing — _cast_proximity_sensors()</h3>
+      <p>
+        Eight rays are cast from the robot centre at angles
+        <code>2πi/8</code> relative to the current heading for i = 0..7.
+        For each ray, <code>ray_wall_intersection</code> is called first to
+        find the nearest wall hit, then <code>ray_circle_intersection</code>
+        is called for every obstacle, taking the minimum distance overall.
+        The raw distance is converted to a normalised reading:
+      </p>
+      <div class="formula">
+        <span class="lhs">p_i =</span>
+        <span class="rhs">1 − d_i / PROX_RANGE</span>
+      </div>
+      <p>
+        A reading of 0 means the ray reached its full range without hitting
+        anything. A reading of 1 means the obstacle is at contact distance.
+        Readings are stored in <code>robot.prox_readings</code> and exposed
+        for the renderer.
+      </p>
+
+      <h3>Target sensing — _sense_target()</h3>
+      <p>
+        The target sensor checks whether the intruder is within
+        <code>TARGET_SENSOR_RANGE</code> and within ±<code>TARGET_SENSOR_FOV</code>
+        of the robot's heading. If so, it computes an intensity that falls off
+        with both distance and angular offset via cosine weighting:
+      </p>
+      <div class="formula">
+        <span class="lhs">s_L =</span>
+        <span class="rhs">(1 − d_t / d_tgt) · cos(|θ| / φ · π/2)</span>
+        <span class="lhs">&nbsp;  for θ ≥ 0 (target left of heading)</span>
+      </div>
+      <p>
+        <code>s_L</code> and <code>s_R</code> are mutually exclusive — only
+        the sensor on the same side as the target activates. When the target
+        is exactly ahead, both sensors read equally. This smooth weighting
+        prevents sudden jumps as the intruder crosses the heading axis.
+      </p>
+
+      <h3>Braitenberg control law — _braitenberg_control()</h3>
+      <p>
+        Two channels are superimposed. The <strong>pursuit channel</strong>
+        implements Vehicle 2b (excitatory, crossed): each motor is driven by
+        the <em>opposite</em> target sensor, causing the robot to steer toward
+        the stimulus:
+      </p>
+      <div class="formula">
+        <span class="lhs">v_L<sup>pursuit</sup> =</span>
+        <span class="rhs">α · g_t · s_R</span>
+      </div>
+      <div class="formula">
+        <span class="lhs">v_R<sup>pursuit</sup> =</span>
+        <span class="rhs">α · g_t · s_L</span>
+      </div>
+      <p>
+        The <strong>avoidance channel</strong> implements Vehicle 3a
+        (inhibitory): each body half aggregates its proximity load as the
+        maximum reading across sensors in that hemisphere. A strong reading
+        on the left inhibits the right motor, turning the robot away:
+      </p>
+      <div class="formula">
+        <span class="lhs">P_L = max(p_i : i ∈ left half)</span>
+        <span class="lhs">&nbsp;&nbsp;P_R = max(p_i : i ∈ right half)</span>
+      </div>
+      <div class="formula">
+        <span class="lhs">v_L =</span>
+        <span class="rhs">v_L<sup>pursuit</sup> − β · g_p · P_R</span>
+      </div>
+      <div class="formula">
+        <span class="lhs">v_R =</span>
+        <span class="rhs">v_R<sup>pursuit</sup> − β · g_p · P_L</span>
+      </div>
+      <p>
+        Final motor speeds are clamped to [0, MAX_SPEED]. Negative values are
+        clipped to zero — the robot does not reverse in the baseline controller.
+        No forward bias or motor floor is applied; the controller is a pure
+        superposition of the two channels.
+      </p>
+
+      <h3>Differential-drive kinematics — _differential_drive()</h3>
+      <p>
+        Given left and right motor speeds (v_L, v_R), the forward velocity and
+        angular velocity of the robot body are:
+      </p>
+      <div class="formula">
+        <span class="lhs">v_centre = (v_L + v_R) / 2</span>
+        <span class="lhs">&nbsp;&nbsp;&nbsp;&nbsp;ω = (v_R − v_L) / wheelbase</span>
+      </div>
+      <p>
+        The wheelbase is set to <code>2 × ROBOT_RADIUS</code> (wheels at body
+        edge). Heading and position are updated each step:
+      </p>
+      <div class="formula">
+        <span class="lhs">θ ← angle_wrap(θ + ω)</span>
+        <span class="lhs">&nbsp;&nbsp;&nbsp;&nbsp;x ← x + v_centre · cos(θ)</span>
+        <span class="lhs">&nbsp;&nbsp;&nbsp;&nbsp;y ← y + v_centre · sin(θ)</span>
+      </div>
+
+      <h3>Collision resolution — _check_collision()</h3>
+      <p>
+        After every kinematic update, the robot's distance to every obstacle
+        centre is checked. If the robot body overlaps an obstacle (dist &lt;
+        robot_radius + obstacle_radius), a push-out is applied along the
+        collision normal to separate them. The <code>robot.collided</code> flag
+        is set for that step and picked up by the logger and renderer.
+      </p>
+
+      <h3>update() — full step pipeline</h3>
+      <div class="flow">
+        <div class="flow-step a">sense proximity</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step a">sense target</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step g">compute motors</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step b">kinematics</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step c">collision resolve</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step c">arena clamp</div>
+      </div>
+    </section>
+
+    <!-- ── Section 5: intruder.py ─────────────────────────────────────────── -->
+    <section class="section" id="intruder">
+      <div class="section-header">
+        <span class="section-tag">§ 5</span>
+        <h2>intruder.py — Target Agent</h2>
+      </div>
+      <div class="file-badge">intruder.py</div>
+
+      <p>
+        The intruder is a circular agent that moves independently of the robot.
+        It supports three motion modes, switchable at runtime via
+        <code>intruder.set_mode()</code>.
+      </p>
+
+      <h3>bounce mode (default)</h3>
+      <p>
+        The intruder moves at constant speed <code>INTRUDER_SPEED</code> in a
+        fixed direction. On contact with a wall, the appropriate velocity
+        component is negated (angle of incidence = angle of reflection). On
+        contact with an obstacle, the reflection is computed from the collision
+        normal using the formula:
+      </p>
+      <div class="formula">
+        <span class="lhs">θ_new = 2 · θ_normal − θ_current + π</span>
+      </div>
+
+      <h3>random_walk mode</h3>
+      <p>
+        Same wall/obstacle reflection as bounce, but every
+        <code>_rw_interval</code> steps (sampled uniformly from [30, 120]) the
+        intruder adds a random heading perturbation of up to ±90°. This makes
+        the target less predictable without making it fully erratic.
+      </p>
+
+      <h3>waypoints mode</h3>
+      <p>
+        The intruder steers directly toward a sequence of (x, y) waypoints,
+        advancing to the next when within 20 px of the current target.
+        The waypoint list is set via <code>intruder.set_waypoints(points)</code>
+        and cycles indefinitely.
+      </p>
+
+      <div class="callout blue">
+        <strong>Note on arena clamping</strong>
+        All three modes call <code>_clamp_to_arena()</code> at the end of each
+        update to hard-clip the intruder position within the arena bounds.
+        This prevents numeric drift from pushing the agent outside the walls
+        in edge cases where the reflection logic doesn't fire exactly at the
+        boundary.
+      </div>
+    </section>
+
+    <!-- ── Section 6: renderer.py ─────────────────────────────────────────── -->
+    <section class="section" id="renderer">
+      <div class="section-header">
+        <span class="section-tag">§ 6</span>
+        <h2>renderer.py — Pygame Visualisation</h2>
+      </div>
+      <div class="file-badge">renderer.py</div>
+
+      <p>
+        All drawing is handled by the <code>Renderer</code> class. It receives
+        the current simulation state as arguments to <code>draw()</code> each
+        frame — it holds no simulation state itself. This clean separation means
+        the renderer can be dropped without touching any of the physics code.
+      </p>
+
+      <p>
+        An RGBA overlay <code>Surface</code> is used for transparent elements
+        (sensor rays, sensor FOV wedge, capture ring). At each frame it is
+        cleared, drawn to, and then composited onto the main screen via
+        <code>screen.blit(overlay)</code>. This lets sensor visualisations have
+        variable opacity without affecting the solid obstacle and agent drawing
+        beneath them.
+      </p>
+
+      <h3>Proximity sensor rays</h3>
+      <p>
+        Each of the 8 proximity rays is drawn as a line from the robot centre
+        outward. The ray length is <code>PROX_RANGE × (1 − reading)</code>
+        — a high reading (obstacle close) shortens the ray visually.
+        Colour intensity increases with reading: a faint blue ray means clear
+        space ahead, a bright one means the sensor is nearly at contact.
+      </p>
+
+      <h3>Target sensor FOV</h3>
+      <p>
+        The target sensor's field of view is drawn as two transparent amber
+        wedges fanning left and right from the robot's heading direction. The
+        arc edges are approximated with 20 line segments from the robot centre
+        to points on the arc radius.
+      </p>
+
+      <h3>HUD overlay</h3>
+      <p>
+        A monospace readout in the top-left corner displays step count, robot
+        position, motor speeds (v_L / v_R), and target sensor readings. A
+        "TARGET CAPTURED" message is rendered centred on screen when
+        <code>captured=True</code>.
+      </p>
+    </section>
+
+    <!-- ── Section 7: main.py ─────────────────────────────────────────────── -->
+    <section class="section" id="main">
+      <div class="section-header">
+        <span class="section-tag">§ 7</span>
+        <h2>main.py — Live Simulation Loop</h2>
+      </div>
+      <div class="file-badge">main.py</div>
+
+      <p>
+        The entry point for interactive use. Instantiates the renderer, robot,
+        intruder, and logger, then runs the main Pygame event loop at
+        <code>FPS = 60</code> frames per second.
+      </p>
+
+      <h3>Event handling</h3>
+      <table class="param-table">
+        <thead><tr><th>Key</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>S</td><td>Toggle sensor ray / FOV visualisation on/off</td></tr>
+          <tr><td>R</td><td>Reset robot, intruder, and logger to initial state</td></tr>
+          <tr><td>Space</td><td>Pause / resume the simulation</td></tr>
+          <tr><td>Q / Esc</td><td>Quit</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Obstacle loading</h3>
+      <p>
+        The <code>load_obstacles()</code> function in main.py returns the
+        static layout from <code>config.OBSTACLES</code> by default. A commented
+        block in the function shows how to replace this with a random density
+        generator for manual interactive testing at specific densities.
+      </p>
+
+      <h3>Logger integration</h3>
+      <p>
+        A <code>Logger</code> instance is created at startup with
+        <code>density=0.0, trial=0</code>. It logs every step to
+        <code>results/steps/</code> and writes a summary row to
+        <code>results/trials.csv</code> on capture. On reset (R key), a new
+        Logger instance is created fresh.
+      </p>
+    </section>
+
+    <!-- ── Section 8: logger.py ───────────────────────────────────────────── -->
+    <section class="section" id="logger">
+      <div class="section-header">
+        <span class="section-tag">§ 8</span>
+        <h2>logger.py — CSV Data Logging</h2>
+      </div>
+      <div class="file-badge">logger.py</div>
+
+      <p>
+        Writes two outputs per trial. The <strong>per-step CSV</strong> records
+        a row every simulation step. The <strong>trial summary CSV</strong>
+        appends one row when <code>log.close()</code> is called at trial end.
+        The header for <code>trials.csv</code> is written once by
+        <code>run_experiments.py</code> at the start of each full run,
+        ensuring no cross-run accumulation.
+      </p>
+
+      <h3>Per-step fields</h3>
+      <div class="output-tree">
+        <span class="dir">results/steps/density0.10_layout02_trial003.csv</span><br>
+        <span class="file">  step, robot_x, robot_y, robot_angle</span><br>
+        <span class="file">  robot_vl, robot_vr</span><br>
+        <span class="file">  intruder_x, intruder_y</span><br>
+        <span class="file">  dist_to_intruder</span><br>
+        <span class="file">  target_left, target_right</span><br>
+        <span class="file">  prox_max         </span><span class="note">← max of all 8 sensor readings</span><br>
+        <span class="file">  collided         </span><span class="note">← 1 if overlapping obstacle this step</span><br>
+        <span class="file">  heading_change   </span><span class="note">← |Δangle| from previous step (rad)</span><br>
+        <span class="file">  target_detected  </span><span class="note">← 1 if either target sensor > 0</span>
+      </div>
+
+      <h3>Trial summary fields</h3>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="m-name">capture_step</div>
+          <div class="m-title">Capture Time</div>
+          <div class="m-desc">Steps from start to capture. Set to MAX_STEPS (4000) on timeout.</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-name">collision_count</div>
+          <div class="m-title">Collision Count</div>
+          <div class="m-desc">Total steps where robot body overlapped an obstacle.</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-name">path_ratio</div>
+          <div class="m-title">Path Efficiency</div>
+          <div class="m-desc">Actual path length divided by straight-line distance from robot start to intruder position at end of trial.</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-name">pursuit_efficiency</div>
+          <div class="m-title">Composite Index η</div>
+          <div class="m-desc">1 / (capture_step × (1 + collisions) + ε). Higher is better; penalises both slow capture and high collision rate.</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-name">time_to_first_detection</div>
+          <div class="m-title">Detection Latency</div>
+          <div class="m-desc">Step at which either target sensor first read non-zero. −1 if never detected within the trial.</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-name">mean_heading_change_rate</div>
+          <div class="m-title">Directional Stability</div>
+          <div class="m-desc">Mean |Δangle| per step in rad/step. High values indicate avoidance-channel thrashing or oscillation.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 9: run_experiments.py ─────────────────────────────────── -->
+    <section class="section" id="runner">
+      <div class="section-header">
+        <span class="section-tag">§ 9</span>
+        <h2>run_experiments.py — Headless Batch Runner</h2>
+      </div>
+      <div class="file-badge">run_experiments.py</div>
+
+      <p>
+        Drives the simulation headlessly — no Pygame window, no rendering —
+        at maximum speed. This is the file you run to collect baseline data.
+        The default configuration runs 160 trials (8 densities × 4 layouts ×
+        5 trials).
+      </p>
+
+      <h3>Obstacle layout generation</h3>
+      <p>
+        Obstacles are placed by rejection sampling. A candidate circle is drawn
+        at a random position and radius (15–30 px). It is rejected if it:
+        (a) overlaps any existing obstacle with a small buffer gap,
+        (b) falls within 60 px of the robot start position, or
+        (c) falls within 50 px of the intruder start position.
+        Sampling continues until the combined obstacle area reaches the target
+        density fraction of the arena area.
+      </p>
+
+      <h3>Seed hierarchy — reproducibility</h3>
+      <p>
+        Every layout and trial is individually reproducible. The seed hierarchy
+        is:
+      </p>
+      <div class="output-tree">
+        <span class="dir">BASE_SEED = 42</span><br>
+        <span class="file">  layout_seed = BASE_SEED + density_index × 1000 + layout_id</span><br>
+        <span class="note">  → determines obstacle positions for this layout</span><br>
+        <span class="file">  trial_seed  = layout_seed × 100 + trial_index</span><br>
+        <span class="note">  → determines intruder initial heading for this trial</span>
+      </div>
+      <p>
+        Both the pure Braitenberg and hybrid experiments use the same seed
+        hierarchy, so they are evaluated on identical layouts and intruder
+        trajectories — a fair comparison.
+      </p>
+
+      <h3>Default parameters</h3>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Default</th><th>CLI flag</th></tr></thead>
+        <tbody>
+          <tr><td>DENSITY_LEVELS</td><td>[0%, 5%, 10%, 15%, 20%, 25%, 30%, 40%]</td><td>--densities</td></tr>
+          <tr><td>N_LAYOUTS</td><td>4</td><td>--layouts</td></tr>
+          <tr><td>N_TRIALS</td><td>5</td><td>--trials</td></tr>
+          <tr><td>MAX_STEPS</td><td>4000</td><td>--max-steps</td></tr>
+          <tr><td>OUT_DIR</td><td>results/</td><td>--out</td></tr>
+          <tr><td>BASE_SEED</td><td>42</td><td>--seed</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── Section 10: analyse.py ─────────────────────────────────────────── -->
+    <section class="section" id="analyse">
+      <div class="section-header">
+        <span class="section-tag">§ 10</span>
+        <h2>analyse.py — Analysis and Plotting</h2>
+      </div>
+      <div class="file-badge">analyse.py</div>
+
+      <p>
+        Reads <code>results/trials.csv</code> and produces six plots saved to
+        <code>plots/</code>. Requires <code>matplotlib</code> and
+        <code>numpy</code>; falls back to a text summary if these are not
+        installed.
+      </p>
+
+      <h3>Loading and cleaning</h3>
+      <p>
+        The CSV is read with <code>encoding="utf-8-sig"</code> to handle the
+        BOM that Windows adds to text files. All string values are stripped of
+        whitespace before numeric parsing — this prevents silent corruption from
+        the <code>\r</code> line endings that Windows produces. Density keys are
+        rounded to 4 decimal places before grouping to prevent floating-point
+        split (0.1 vs 0.10000000002 landing in separate buckets).
+      </p>
+
+      <h3>Six output plots</h3>
+      <table class="param-table">
+        <thead><tr><th>Filename</th><th>Type</th><th>Shows</th></tr></thead>
+        <tbody>
+          <tr><td>capture_step_vs_density.png</td><td>Box plot</td><td>Distribution of capture times per density, including timeout trials</td></tr>
+          <tr><td>success_rate_vs_density.png</td><td>Line + fill</td><td>Fraction of trials that captured within MAX_STEPS</td></tr>
+          <tr><td>path_ratio_vs_density.png</td><td>Box plot</td><td>Path efficiency; outliers above 50× are excluded as trapped trials</td></tr>
+          <tr><td>pursuit_efficiency_vs_density.png</td><td>Bar + error</td><td>Mean composite index η with ±1 std deviation bars</td></tr>
+          <tr><td>heading_change_vs_density.png</td><td>Box plot</td><td>Per-trial mean |Δangle|/step — diagnostic for avoidance thrashing</td></tr>
+          <tr><td>time_to_first_detection_vs_density.png</td><td>Box plot</td><td>Steps until target first entered sensor range; never-detected trials excluded</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── Section 11: Data flow ──────────────────────────────────────────── -->
+    <section class="section" id="dataflow">
+      <div class="section-header">
+        <span class="section-tag">§ 11</span>
+        <h2>End-to-End Data Flow</h2>
+      </div>
+
+      <div class="output-tree">
+        <span class="dir">run_experiments.py</span><br>
+        <span class="file">  ↳ creates fresh results/trials.csv (with header)</span><br>
+        <span class="file">  ↳ for each density × layout × trial:</span><br>
+        <span class="file">      BraitenbergRobot.update() × MAX_STEPS</span><br>
+        <span class="file">      Intruder.update()         × MAX_STEPS</span><br>
+        <span class="file">      Logger.step()             × MAX_STEPS  → results/steps/*.csv</span><br>
+        <span class="file">      Logger.close()                         → results/trials.csv (appended)</span><br>
+        <br>
+        <span class="dir">analyse.py</span><br>
+        <span class="file">  ↳ reads results/trials.csv</span><br>
+        <span class="file">  ↳ groups rows by density</span><br>
+        <span class="file">  ↳ prints text summary table</span><br>
+        <span class="file">  ↳ writes 6 plots → plots/*.png</span>
+      </div>
+
+      <div class="callout green">
+        <strong>Important</strong>
+        run_experiments.py always creates a fresh trials.csv at the start of
+        each run. If you want to preserve previous results, copy or rename the
+        results/ directory before running again. The per-step CSVs in
+        results/steps/ are never overwritten — filenames include density,
+        layout id, and trial index.
+      </div>
+    </section>
+
+    <!-- ── Section 12: Running ────────────────────────────────────────────── -->
+    <section class="section" id="running">
+      <div class="section-header">
+        <span class="section-tag">§ 12</span>
+        <h2>Running the Code</h2>
+      </div>
+
+      <h3>Install dependencies</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">terminal</span>
+        </div>
+        <pre>pip install pygame matplotlib numpy</pre>
+      </div>
+
+      <h3>Interactive simulation</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">terminal</span>
+          <span class="code-file">main.py</span>
+        </div>
+        <pre>python main.py</pre>
+      </div>
+
+      <h3>Full batch experiment (160 trials)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">terminal</span>
+          <span class="code-file">run_experiments.py</span>
+        </div>
+        <pre>python run_experiments.py</pre>
+      </div>
+
+      <h3>Custom experiment</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">terminal</span>
+        </div>
+        <pre>python run_experiments.py \
+  --densities 0.0 0.10 0.20 0.30 \
+  --layouts 4 \
+  --trials 5 \
+  --max-steps 4000 \
+  --out results_custom/</pre>
+      </div>
+
+      <h3>Analysis and plots</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">terminal</span>
+          <span class="code-file">analyse.py</span>
+        </div>
+        <pre>python analyse.py
+python analyse.py --csv results_custom/trials.csv --out plots_custom/</pre>
+      </div>
+
+      <div class="callout amber">
+        <strong>Windows note</strong>
+        Use <code>python3.11.exe</code> if that is your installed interpreter.
+        All file paths use forward slashes internally and are compatible with
+        Windows via Python's os.path — no changes needed.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+results/
+results_hybrid/
+results_improved/
+results_improved_baseline/
+plots_compare/
+
+.env
+.vscode/

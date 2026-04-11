@@ -1,0 +1,261 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-mono, monospace); }
+
+.wrap { padding: 0.5rem 0 2rem; }
+
+.file-block { margin-bottom: 1.5rem; }
+
+.file-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  border: 0.5px solid var(--color-border-secondary);
+  border-bottom: none;
+}
+.file-tag {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: 4px;
+}
+.file-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.file-desc { font-size: 12px; color: var(--color-text-secondary); margin-left: auto; }
+
+.param-table {
+  width: 100%; border-collapse: collapse;
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+  overflow: hidden;
+  font-size: 12px;
+}
+.param-table th {
+  background: var(--color-background-secondary);
+  color: var(--color-text-tertiary);
+  font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 6px 12px; text-align: left;
+  border-bottom: 0.5px solid var(--color-border-secondary);
+}
+.param-table td {
+  padding: 7px 12px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  vertical-align: top; color: var(--color-text-primary);
+}
+.param-table tr:last-child td { border-bottom: none; }
+.param-table tr:hover td { background: var(--color-background-secondary); }
+
+.pname { color: #639922; font-weight: 500; white-space: nowrap; }
+.pval  { color: #BA7517; white-space: nowrap; }
+.pdesc { color: var(--color-text-secondary); font-family: var(--font-sans, sans-serif);
+         font-size: 12px; line-height: 1.5; }
+.ptag  { font-size: 10px; padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+         margin-left: 4px; vertical-align: middle; }
+
+.tag-sim   { background: #E1F5EE; color: #085041; }
+.tag-rl    { background: #E6F1FB; color: #0C447C; }
+.tag-exp   { background: #FAEEDA; color: #633806; }
+.tag-vis   { background: #EEEDFE; color: #3C3489; }
+
+@media (prefers-color-scheme: dark) {
+  .pname { color: #97C459; }
+  .pval  { color: #EF9F27; }
+  .tag-sim   { background: #085041; color: #9FE1CB; }
+  .tag-rl    { background: #0C447C; color: #B5D4F4; }
+  .tag-exp   { background: #633806; color: #FAC775; }
+  .tag-vis   { background: #3C3489; color: #CECBF6; }
+}
+
+.section-label {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-text-tertiary); padding: 0.4rem 0 0.5rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1rem;
+}
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+.fh-sim  { background: #E1F5EE; border-color: #1D9E75; }
+.fh-rl   { background: #E6F1FB; border-color: #185FA5; }
+.fh-exp  { background: #FAEEDA; border-color: #854F0B; }
+.fh-vis  { background: #EEEDFE; border-color: #534AB7; }
+
+@media (prefers-color-scheme: dark) {
+  .fh-sim  { background: #04342C; border-color: #1D9E75; }
+  .fh-rl   { background: #042C53; border-color: #378ADD; }
+  .fh-exp  { background: #412402; border-color: #BA7517; }
+  .fh-vis  { background: #26215C; border-color: #7F77DD; }
+}
+</style>
+
+<div class="wrap">
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div>simulation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div>RL training</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#BA7517"></div>experiment runner</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div>visualisation</div>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-sim">
+    <span class="file-name">config.py</span>
+    <span class="file-tag tag-sim">sim</span>
+    <span class="file-desc">change this file first — everything reads from it</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">ARENA_W / ARENA_H</td><td class="pval">800</td><td class="pdesc">Room size in pixels. 1 px ≈ 1 cm at your scale.</td></tr>
+      <tr><td class="pname">ROBOT_RADIUS</td><td class="pval">12</td><td class="pdesc">Physical body size. Affects collision detection and sensor ray origins.</td></tr>
+      <tr><td class="pname">ROBOT_MAX_SPEED</td><td class="pval">3.0</td><td class="pdesc">Motor speed ceiling. Must stay above intruder speed to allow capture.</td></tr>
+      <tr><td class="pname">ROBOT_START</td><td class="pval">(100, 400)</td><td class="pdesc">Robot spawn position each trial. Change to test different starting sides.</td></tr>
+      <tr><td class="pname">N_PROX_SENSORS</td><td class="pval">8</td><td class="pdesc">Number of proximity rays. 8 = 45° spacing (e-puck configuration).</td></tr>
+      <tr><td class="pname">PROX_RANGE</td><td class="pval">80</td><td class="pdesc">Max obstacle detection distance. Reduce for short-range IR, raise for LIDAR.</td></tr>
+      <tr><td class="pname">PROX_GAIN</td><td class="pval">1.5</td><td class="pdesc">Fixed multiplier on avoidance channel. Raise = stronger obstacle aversion.</td></tr>
+      <tr><td class="pname">TARGET_SENSOR_FOV</td><td class="pval">1.8 rad</td><td class="pdesc">Half-angle of target sensor. ±1.8 rad = ~206° total field of view.</td></tr>
+      <tr><td class="pname">TARGET_SENSOR_RANGE</td><td class="pval">900</td><td class="pdesc">Max intruder detection distance. 900 = full arena coverage.</td></tr>
+      <tr><td class="pname">TARGET_GAIN</td><td class="pval">2.5</td><td class="pdesc">Fixed multiplier on pursuit channel. Raise = faster approach when target is visible.</td></tr>
+      <tr><td class="pname">PURSUIT_WEIGHT α</td><td class="pval">1.0</td><td class="pdesc">Baseline pursuit aggressiveness. RL policy adjusts this at runtime.</td></tr>
+      <tr><td class="pname">AVOIDANCE_WEIGHT β</td><td class="pval">1.2</td><td class="pdesc">Baseline avoidance strength. β &gt; α prioritises not hitting obstacles.</td></tr>
+      <tr><td class="pname">FORWARD_BIAS</td><td class="pval">0.4</td><td class="pdesc">Stage 3 only. Constant drive added so robot never fully stops. Set 0 to disable.</td></tr>
+      <tr><td class="pname">MOTOR_FLOOR</td><td class="pval">0.2</td><td class="pdesc">Stage 3 only. Minimum motor speed after avoidance subtraction.</td></tr>
+      <tr><td class="pname">STUCK_PATIENCE</td><td class="pval">80</td><td class="pdesc">Stage 3 only. Steps before declaring the robot stuck. Raise = slower to react.</td></tr>
+      <tr><td class="pname">STUCK_DIST_THRESH</td><td class="pval">8 px</td><td class="pdesc">Stage 3 only. Movement threshold for stuck detection. Raise = more sensitive.</td></tr>
+      <tr><td class="pname">RECOVERY_DURATION</td><td class="pval">40</td><td class="pdesc">Stage 3 only. Steps of reverse-turn before resuming normal control.</td></tr>
+      <tr><td class="pname">CAPTURE_RADIUS</td><td class="pval">20</td><td class="pdesc">How close the robot must get to count as a capture.</td></tr>
+      <tr><td class="pname">INTRUDER_RADIUS</td><td class="pval">10</td><td class="pdesc">Intruder body size. Affects capture detection and obstacle bounce.</td></tr>
+      <tr><td class="pname">INTRUDER_SPEED</td><td class="pval">1.8</td><td class="pdesc">Intruder constant velocity. Keep below ROBOT_MAX_SPEED.</td></tr>
+      <tr><td class="pname">INTRUDER_START</td><td class="pval">(700, 400)</td><td class="pdesc">Intruder spawn. Opposite end of arena from robot by default.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-exp">
+    <span class="file-name">run_experiments.py</span>
+    <span class="file-tag tag-exp">experiment</span>
+    <span class="file-desc">controls Stage 1 batch runs — also imported by Stages 2 and 3</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">DENSITY_LEVELS</td><td class="pval">[0%, 5%…40%]</td><td class="pdesc">Which obstacle densities to test. Add or remove values to change the sweep.</td></tr>
+      <tr><td class="pname">N_LAYOUTS</td><td class="pval">4</td><td class="pdesc">Fixed obstacle arrangements per density. More = better statistical coverage.</td></tr>
+      <tr><td class="pname">N_TRIALS</td><td class="pval">5</td><td class="pdesc">Independent trials per layout (different intruder heading each time).</td></tr>
+      <tr><td class="pname">MAX_STEPS</td><td class="pval">4000</td><td class="pdesc">Episode timeout. Uncaptured trials get this value as their capture_step.</td></tr>
+      <tr><td class="pname">BASE_SEED</td><td class="pval">42</td><td class="pdesc">Root RNG seed. Change to get a completely different set of layouts.</td></tr>
+      <tr><td class="pname">OBS_RADIUS_MIN/MAX</td><td class="pval">15 / 30</td><td class="pdesc">Obstacle size range in pixels. Represents columns (small) to furniture clusters (large).</td></tr>
+      <tr><td class="pname">MIN_CLEARANCE_ROBOT</td><td class="pval">60</td><td class="pdesc">Keeps obstacles away from the robot spawn. Prevents instant collision at trial start.</td></tr>
+      <tr><td class="pname">MIN_CLEARANCE_INTRUDER</td><td class="pval">50</td><td class="pdesc">Keeps obstacles away from the intruder spawn.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-rl">
+    <span class="file-name">train_rl.py</span>
+    <span class="file-tag tag-rl">RL</span>
+    <span class="file-desc">REINFORCE training — tune these if learning is unstable</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">N_EPISODES</td><td class="pval">2000</td><td class="pdesc">Total training episodes. For a weak laptop use 500.</td></tr>
+      <tr><td class="pname">MAX_STEPS_EP</td><td class="pval">2000</td><td class="pdesc">Episode length cap during training. Shorter = faster iteration but less signal.</td></tr>
+      <tr><td class="pname">LR_ACTOR</td><td class="pval">5e-4</td><td class="pdesc">Actor learning rate. Lower if policy oscillates; raise if learning is very slow.</td></tr>
+      <tr><td class="pname">LR_CRITIC</td><td class="pval">1e-3</td><td class="pdesc">Critic learning rate. Usually 2–5× actor rate.</td></tr>
+      <tr><td class="pname">LR_LOG_STD</td><td class="pval">1e-4</td><td class="pdesc">Exploration decay rate. Lower = policy stays exploratory longer.</td></tr>
+      <tr><td class="pname">GAMMA</td><td class="pval">0.99</td><td class="pdesc">Discount factor. 0.99 = cares about rewards up to ~100 steps ahead.</td></tr>
+      <tr><td class="pname">ENTROPY_COEF</td><td class="pval">0.01</td><td class="pdesc">Exploration bonus weight. Raise if policy collapses to one behaviour too early.</td></tr>
+      <tr><td class="pname">GRAD_CLIP</td><td class="pval">1.0</td><td class="pdesc">Max gradient norm per update. Prevents large destabilising steps.</td></tr>
+      <tr><td class="pname">CURRICULUM_END</td><td class="pval">500</td><td class="pdesc">Episodes before full density range is introduced. Raise if early learning is erratic.</td></tr>
+      <tr><td class="pname">EVAL_INTERVAL</td><td class="pval">100</td><td class="pdesc">How often to print and log evaluation capture rate. Lower = more verbose.</td></tr>
+      <tr><td class="pname">SAVE_INTERVAL</td><td class="pval">500</td><td class="pdesc">How often to save a policy checkpoint (.npz file).</td></tr>
+      <tr><td class="pname">DENSITY_EASY</td><td class="pval">[0%, 5%, 10%]</td><td class="pdesc">Densities used during curriculum warmup phase.</td></tr>
+      <tr><td class="pname">DENSITY_FULL</td><td class="pval">[0%…40%]</td><td class="pdesc">Full density range used after curriculum phase ends.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-rl">
+    <span class="file-name">rl_env.py</span>
+    <span class="file-tag tag-rl">RL</span>
+    <span class="file-desc">reward shaping — change if robot learns the wrong behaviour</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">LAMBDA_DIST</td><td class="pval">0.01</td><td class="pdesc">Per-step penalty for distance to intruder. Encourages continuous approach.</td></tr>
+      <tr><td class="pname">LAMBDA_COLL</td><td class="pval">0.5</td><td class="pdesc">Per-step penalty for collision. Raise if robot learns to ram through obstacles.</td></tr>
+      <tr><td class="pname">LAMBDA_TIME</td><td class="pval">0.002</td><td class="pdesc">Small per-step time cost. Encourages fast capture over slow cautious approach.</td></tr>
+      <tr><td class="pname">LAMBDA_CAPT</td><td class="pval">10.0</td><td class="pdesc">Terminal bonus on capture. Must dominate all per-step penalties summed over episode.</td></tr>
+      <tr><td class="pname">MAX_STEPS</td><td class="pval">4000</td><td class="pdesc">Training episode timeout. Matches experiment runner timeout.</td></tr>
+      <tr><td class="pname">DENSITY_RANGE</td><td class="pval">(0.0, 0.35)</td><td class="pdesc">Density range sampled during training when no explicit density is set.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-rl">
+    <span class="file-name">rl_policy.py</span>
+    <span class="file-tag tag-rl">RL</span>
+    <span class="file-desc">network architecture — change before training, not after</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">HIDDEN</td><td class="pval">32</td><td class="pdesc">Hidden layer size. Raise to 64 for more expressive policy; raises training time.</td></tr>
+      <tr><td class="pname">DELTA_MAX</td><td class="pval">0.8</td><td class="pdesc">Max weight adjustment output. Policy can shift α or β by at most ±0.8 from baseline.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-rl">
+    <span class="file-name">hybrid_robot.py &amp; hybrid_robot_improved.py</span>
+    <span class="file-tag tag-rl">RL</span>
+    <span class="file-desc">effective weight bounds — hard clamps on RL output</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">ALPHA_MIN / ALPHA_MAX</td><td class="pval">0.1 / 2.5</td><td class="pdesc">Hard clamp on effective α. Policy cannot push pursuit weight outside this range.</td></tr>
+      <tr><td class="pname">BETA_MIN / BETA_MAX</td><td class="pval">0.1 / 2.5</td><td class="pdesc">Hard clamp on effective β. Prevents the policy from disabling avoidance entirely.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-sim">
+    <span class="file-name">intruder.py</span>
+    <span class="file-tag tag-sim">sim</span>
+    <span class="file-desc">intruder behaviour — hardcoded inside the class</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">_rw_interval</td><td class="pval">60 steps</td><td class="pdesc">Random walk mode: average steps between heading changes. Edit line 40 in intruder.py.</td></tr>
+      <tr><td class="pname">_wp_thresh</td><td class="pval">20 px</td><td class="pdesc">Waypoint mode: how close to get before advancing to next waypoint. Edit line 45.</td></tr>
+      <tr><td class="pname">mode arg</td><td class="pval">'bounce'</td><td class="pdesc">Set in main.py / run_experiments.py when Intruder() is constructed. Options: bounce, random_walk, waypoints.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="file-block">
+  <div class="file-header fh-vis">
+    <span class="file-name">main.py</span>
+    <span class="file-tag tag-vis">visualisation</span>
+    <span class="file-desc">live sim only — does not affect batch experiments</span>
+  </div>
+  <table class="param-table">
+    <thead><tr><th>parameter</th><th>default</th><th>what it controls</th></tr></thead>
+    <tbody>
+      <tr><td class="pname">FPS (from config)</td><td class="pval">60</td><td class="pdesc">Pygame frame rate. Lower to slow down visualisation for debugging.</td></tr>
+      <tr><td class="pname">load_obstacles()</td><td class="pval">config.OBSTACLES</td><td class="pdesc">Swap in the random generator (commented block inside the function) to test a specific density live.</td></tr>
+      <tr><td class="pname">Intruder mode</td><td class="pval">'bounce'</td><td class="pdesc">Change in make_sim() on line ~60 to 'random_walk' or 'waypoints' for live testing.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
