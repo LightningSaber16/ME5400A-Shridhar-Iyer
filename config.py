@@ -16,7 +16,7 @@ ROBOT_START_ANGLE = 0.0         # radians
 # Sensors  ── proximity (obstacle avoidance)
 N_PROX_SENSORS   = 8            # evenly spaced around body
 PROX_RANGE       = 60           # px  — max detection distance
-PROX_GAIN        = 1.5          # scales avoidance response
+PROX_GAIN        = 2.0          # scales avoidance response
 
 # Sensors  ── target (pursuit)
 TARGET_SENSOR_FOV   = 1.5       # radians, half-angle each side (≈ 103° total)

@@ -1,15 +1,46 @@
 # robot_improved.py
 #
-# Improved Braitenberg vehicle — extends the original with:
-#   - Cosine-weighted proximity blending (smoother avoidance)
-#   - Forward bias (robot never fully stops when target unseen)
-#   - Motor floor (avoidance cannot reduce speed to zero)
-#   - Stuck detection and recovery (escape from deadlocks)
+# BraitenbergRobotImproved — principled kinematic extensions to the pure
+# reactive baseline.
 #
-# This is Stage 3 of the pipeline:
-#   Stage 1: BraitenbergRobot    (robot.py)          — pure reactive baseline
-#   Stage 2: HybridRobot         (hybrid_robot.py)   — RL weights on Stage 1
-#   Stage 3: HybridRobotImproved (hybrid_robot_improved.py) — RL weights on this
+# Two research-grounded improvements over the original controller:
+#
+# 1. INVERSE-SQUARE DANGER WEIGHTING (replaces cosine weighting)
+#    Motivation: potential field theory (Khatib, 1986) defines repulsive
+#    forces as inversely proportional to the square of distance to an
+#    obstacle. Applied at the sensor level, sensors reporting nearby
+#    obstacles contribute quadratically more to the avoidance channel than
+#    sensors reporting distant ones. This produces a controller whose
+#    avoidance response is proportional to actual collision danger rather
+#    than sensor geometry, and reduces collisions caused by insufficient
+#    reaction to close obstacles.
+#
+#    Weight for sensor i:
+#      w_i = 1 / (d_i^2 + epsilon)
+#    where d_i is the raw distance to the nearest obstacle on that ray
+#    (not the normalised reading), and epsilon prevents division by zero.
+#
+# 2. GAP NAVIGATION RECOVERY (replaces blind alternating-turn recovery)
+#    Motivation: gap navigation (Minguez & Montano, 2004) identifies
+#    navigable gaps in the sensor ring and steers toward the widest free
+#    passage. Rather than a timed reverse-turn in a fixed direction (which
+#    may steer the robot further into obstacles), the robot identifies the
+#    sector with the most free space and steers toward it during recovery.
+#
+#    Implementation: the 8 proximity sensors are treated as 8 candidate
+#    escape directions. The sensor reporting the lowest reading (most free
+#    space) defines the escape gap. The robot steers differentially toward
+#    that direction for RECOVERY_DURATION steps.
+#
+# Retained from previous version:
+#   - Forward bias (prevents stalling when target unseen)
+#   - Centre-mean motor floor (avoidance cannot fully suppress movement)
+#   - Stuck detection (unchanged threshold logic)
+#
+# Pipeline:
+#   Stage 1: BraitenbergRobot         (robot.py)        — pure reactive baseline
+#   Stage 2: HybridRobot              (hybrid_robot.py) — RL weights on Stage 1
+#   Stage 4: BraitenbergRobotImproved (this file)       — principled kinematics
 
 import math
 from geometry import (
@@ -18,21 +49,24 @@ from geometry import (
 )
 import config as C
 
+# Inverse-square weighting: epsilon in px^2.
+# d=1px  -> weight ~1.0  (imminent collision)
+# d=60px -> weight ~0.00028 (far obstacle, negligible)
+_DANGER_EPS = 1.0
+
 
 class BraitenbergRobotImproved:
     """
-    Improved differential-drive Braitenberg vehicle.
+    Braitenberg pursuit controller with inverse-square danger weighting
+    and gap navigation recovery.
 
-    Changes from the original BraitenbergRobot:
-      1. Cosine-weighted proximity aggregation instead of max per hemisphere.
-         Front-facing sensors have stronger influence; rear sensors still
-         contribute but with lower weight. Produces smoother avoidance.
-      2. Forward bias: FORWARD_BIAS px/step added to both motors every step.
-         Keeps the robot patrolling when the target is outside sensor range.
-      3. Motor floor: motor speed never drops below MOTOR_FLOOR.
-         Avoidance channel cannot pin the robot completely.
-      4. Stuck recovery: if displacement < STUCK_DIST_THRESH over
-         STUCK_PATIENCE steps, triggers a timed reverse-turn to escape.
+    The avoidance channel uses sensor weights derived from potential field
+    theory: w_i = 1/(d_i^2 + eps), making avoidance response proportional
+    to collision danger rather than sensor geometry.
+
+    Stuck recovery uses gap navigation: the robot steers toward the most
+    open sector in its proximity sensor ring rather than using a fixed
+    alternating turn direction.
     """
 
     def __init__(self, x=None, y=None, angle=None):
@@ -43,30 +77,37 @@ class BraitenbergRobotImproved:
         self.radius    = C.ROBOT_RADIUS
         self.max_speed = C.ROBOT_MAX_SPEED
 
-        self.n_prox = C.N_PROX_SENSORS
+        self.n_prox      = C.N_PROX_SENSORS
         self.prox_angles = [
             2 * math.pi * i / self.n_prox for i in range(self.n_prox)
         ]
 
         # Exposed for visualisation / logging
-        self.prox_readings = [0.0] * self.n_prox
-        self.target_left   = 0.0
-        self.target_right  = 0.0
-        self.v_left        = 0.0
-        self.v_right       = 0.0
-        self.collided      = False
+        self.prox_readings  = [0.0] * self.n_prox
+        self._prox_raw_dist = [float(C.PROX_RANGE)] * self.n_prox
+        self.target_left    = 0.0
+        self.target_right   = 0.0
+        self.v_left         = 0.0
+        self.v_right        = 0.0
+        self.collided       = False
 
-        # Stuck-detection state
+        # Stuck detection state
         self._stuck_timer    = 0
         self._stuck_ref_x    = self.x
         self._stuck_ref_y    = self.y
         self._recovery_steps = 0
-        self._recovery_turn  = 1   # alternates +1 / -1
+        self._escape_turn    = 0.0   # set by gap navigation, range [-1, +1]
 
-    # ── Sensing ──────────────────────────────────────────────────────────────
+    # ── Sensing ───────────────────────────────────────────────────────────────
 
     def _cast_proximity_sensors(self, obstacles):
-        readings = []
+        """
+        Cast all 8 proximity rays. Stores both normalised readings in
+        self.prox_readings and raw distances in self._prox_raw_dist.
+        Raw distances feed the inverse-square danger weights.
+        """
+        readings  = []
+        raw_dists = []
         for rel_angle in self.prox_angles:
             world_angle = self.angle + rel_angle
             dx = math.cos(world_angle)
@@ -80,8 +121,11 @@ class BraitenbergRobotImproved:
                     self.x, self.y, dx, dy, cx, cy, r, nearest
                 )
                 nearest = min(nearest, d)
+            raw_dists.append(nearest)
             readings.append(1.0 - nearest / C.PROX_RANGE)
-        self.prox_readings = readings
+
+        self.prox_readings  = readings
+        self._prox_raw_dist = raw_dists
         return readings
 
     def _sense_target(self, tx, ty):
@@ -102,57 +146,110 @@ class BraitenbergRobotImproved:
         self.target_right = right
         return left, right
 
-    # ── Control law (improved) ────────────────────────────────────────────────
+    # ── Control law ───────────────────────────────────────────────────────────
 
     def _braitenberg_control(self, prox_readings, target_left, target_right):
-        # Pursuit channel (unchanged from original)
+        """
+        Compute motor commands combining pursuit (Vehicle 2b) and avoidance
+        (Vehicle 3a) channels.
+
+        Avoidance uses inverse-square danger weighting grounded in potential
+        field theory (Khatib, 1986):
+
+          danger_i = 1 / (d_i^2 + epsilon)
+
+        where d_i is the raw ray distance in pixels. Sensors detecting
+        obstacles within a few pixels contribute quadratically more than
+        sensors detecting distant obstacles, producing a response that
+        scales with actual collision risk.
+        """
+        # ── Pursuit channel (Vehicle 2b) ──────────────────────────────────────
         v_l = C.TARGET_GAIN * C.PURSUIT_WEIGHT * target_right
         v_r = C.TARGET_GAIN * C.PURSUIT_WEIGHT * target_left
 
-        # Avoidance — cosine-weighted across all sensors
-        # Each sensor at relative angle rel_a contributes proportionally to
-        # its forward-facing component. Left-side sensors suppress right motor;
-        # right-side sensors suppress left motor.
+        # ── Avoidance channel — inverse-square danger weighting ───────────────
         prox_left_load  = 0.0
         prox_right_load = 0.0
+
         for i, rel_a in enumerate(self.prox_angles):
-            reading    = prox_readings[i]
-            fwd_weight = max(0.0, math.cos(rel_a)) + 0.3  # 0.3 keeps rear active
-            weighted   = reading * fwd_weight
-            norm_a     = rel_a % (2 * math.pi)
+            reading  = prox_readings[i]
+            raw_dist = self._prox_raw_dist[i]
+            danger   = 1.0 / (raw_dist ** 2 + _DANGER_EPS)
+            contribution = reading * danger
+            norm_a = rel_a % (2 * math.pi)
             if 0 < norm_a <= math.pi:
-                prox_left_load  += weighted
+                prox_left_load  += contribution
             else:
-                prox_right_load += weighted
+                prox_right_load += contribution
 
-        n   = max(1, self.n_prox)
-        v_l -= C.PROX_GAIN * C.AVOIDANCE_WEIGHT * prox_right_load / n
-        v_r -= C.PROX_GAIN * C.AVOIDANCE_WEIGHT * prox_left_load  / n
+        # Normalise so avoidance signal stays in a comparable range to pursuit
+        max_danger = (self.n_prox / 2.0) / (1.0 + _DANGER_EPS)
+        safe_max   = max(max_danger, 1e-6)
+        v_l -= C.PROX_GAIN * C.AVOIDANCE_WEIGHT * prox_right_load / safe_max
+        v_r -= C.PROX_GAIN * C.AVOIDANCE_WEIGHT * prox_left_load  / safe_max
 
-        # Forward bias — keep robot moving when target unseen
+        # ── Forward bias ──────────────────────────────────────────────────────
         v_l += C.FORWARD_BIAS
         v_r += C.FORWARD_BIAS
- 
-        # Motor floor — applied to mean speed so asymmetric avoidance turns
-        # are still permitted, but net forward momentum is preserved
+
+        # ── Centre-mean motor floor ───────────────────────────────────────────
         v_centre = (v_l + v_r) / 2.0
         if v_centre < C.MOTOR_FLOOR:
             deficit = C.MOTOR_FLOOR - v_centre
             v_l += deficit
             v_r += deficit
- 
+
         return v_l, v_r
 
-       
-        return v_l, v_r
+    # ── Gap navigation ────────────────────────────────────────────────────────
 
-    # ── Stuck recovery ────────────────────────────────────────────────────────
+    def _find_escape_direction(self):
+        """
+        Identify the widest free gap in the proximity sensor ring.
+
+        Implements the gap navigation principle (Minguez & Montano, 2004):
+        the sensor with the lowest reading points toward the most navigable
+        free space. The signed angular position of that sensor relative to
+        the robot heading determines the escape turn direction.
+
+        Returns a turn bias in [-1, +1]:
+          +1  -> turn hard left (gap is to the left)
+          -1  -> turn hard right (gap is to the right)
+           0  -> gap is ahead (go straight)
+        """
+        # Find sensor pointing toward most free space
+        min_reading = min(self.prox_readings)
+        gap_idx     = self.prox_readings.index(min_reading)
+        gap_angle   = self.prox_angles[gap_idx]
+
+        # Wrap to [-pi, pi]: positive = left of heading, negative = right
+        signed_gap = angle_wrap(gap_angle)
+
+        # Normalise to [-1, +1]
+        return float(signed_gap / math.pi)
 
     def _update_stuck(self, v_left, v_right):
+        """
+        Stuck detection and gap-directed recovery.
+
+        If the robot has displaced less than STUCK_DIST_THRESH pixels over
+        STUCK_PATIENCE steps, gap navigation identifies the most open escape
+        direction and the robot executes a targeted reverse-turn toward that
+        gap for RECOVERY_DURATION steps.
+
+        This replaces the previous blind alternating-turn with a principled
+        direction derived from the current sensor configuration.
+        """
         if self._recovery_steps > 0:
             self._recovery_steps -= 1
-            rv_l = -C.ROBOT_MAX_SPEED * 0.3 * (1 + self._recovery_turn * 0.4)
-            rv_r = -C.ROBOT_MAX_SPEED * 0.3 * (1 - self._recovery_turn * 0.4)
+            spd      = C.ROBOT_MAX_SPEED * 0.5
+            turn_mag = abs(self._escape_turn) * C.ROBOT_MAX_SPEED * 0.4
+            if self._escape_turn >= 0:
+                rv_l = -spd + turn_mag    # pivot left toward gap
+                rv_r = -spd - turn_mag
+            else:
+                rv_l = -spd - turn_mag    # pivot right toward gap
+                rv_r = -spd + turn_mag
             return rv_l, rv_r
 
         self._stuck_timer += 1
@@ -162,14 +259,22 @@ class BraitenbergRobotImproved:
             self._stuck_ref_x = self.x
             self._stuck_ref_y = self.y
             if moved < C.STUCK_DIST_THRESH:
-                self._recovery_steps  = C.RECOVERY_DURATION
-                self._recovery_turn  *= -1
-                rv_l = -C.ROBOT_MAX_SPEED * 0.5 * (1 + self._recovery_turn * 0.6)
-                rv_r = -C.ROBOT_MAX_SPEED * 0.5 * (1 - self._recovery_turn * 0.6)
+                # Gap navigation: compute escape direction from sensor ring
+                self._escape_turn    = self._find_escape_direction()
+                self._recovery_steps = C.RECOVERY_DURATION
+                spd      = C.ROBOT_MAX_SPEED * 0.5
+                turn_mag = abs(self._escape_turn) * C.ROBOT_MAX_SPEED * 0.4
+                if self._escape_turn >= 0:
+                    rv_l = -spd + turn_mag
+                    rv_r = -spd - turn_mag
+                else:
+                    rv_l = -spd - turn_mag
+                    rv_r = -spd + turn_mag
                 return rv_l, rv_r
+
         return v_left, v_right
 
-    # ── Kinematics ───────────────────────────────────────────────────────────
+    # ── Kinematics ────────────────────────────────────────────────────────────
 
     def _differential_drive(self, v_left, v_right):
         v_left  = max(-self.max_speed, min(self.max_speed, v_left))
@@ -198,7 +303,7 @@ class BraitenbergRobotImproved:
                     self.x += (self.x - cx) / d * overlap
                     self.y += (self.y - cy) / d * overlap
 
-    # ── Main update ──────────────────────────────────────────────────────────
+    # ── Main update ───────────────────────────────────────────────────────────
 
     def update(self, target_x, target_y, obstacles):
         prox   = self._cast_proximity_sensors(obstacles)

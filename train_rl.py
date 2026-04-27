@@ -30,7 +30,7 @@ from rl_policy  import (PolicyNetwork, OBS_DIM, ACT_DIM, DELTA_MAX,
 from rl_env     import SurveillanceEnv
 
 # ── Hyperparameters ───────────────────────────────────────────────────────────
-N_EPISODES      = 1000
+N_EPISODES      = 2000
 MAX_STEPS_EP    = 2000
 LR_ACTOR        = 5e-4
 LR_CRITIC       = 1e-3
@@ -38,7 +38,7 @@ LR_LOG_STD      = 1e-4
 GAMMA           = 0.99
 ENTROPY_COEF    = 0.01
 GRAD_CLIP       = 1.0
-CURRICULUM_END  = 400
+CURRICULUM_END  = 800
 SAVE_INTERVAL   = 250
 EVAL_INTERVAL   = 100
 N_EVAL_EPS      = 20
